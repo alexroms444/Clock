@@ -1,6 +1,10 @@
 /*
 (Manual) :
 
+Документація:
+https://drive.google.com/open?id=1mUgNqpw0LBDaxRcctS12kbnYTdH38Ezz
+https://drive.google.com/open?id=1msSvp3oaJK6IvhGDgUDGpusFzHCAapwC
+
 1)Режим 0:
 (Виводити кнопкою на семисегментний індикатор години ,хвилини)-default ;
  //колір діода червоний.
