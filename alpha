@@ -1,0 +1,235 @@
+/*
+(Manual) :
+
+1)Режим 0:
+(Виводити кнопкою на семисегментний індикатор години ,хвилини)-default ;
+ //колір діода червоний.
+
+2) Режим 1:
+ Виводити кнопкою на семисегментний індикатор хвилини,секунди ;
+//колір діода червоний.
+
+3) Режим 2:
+Режим установки годин ;
+//колір діода синій.
+
+4) Режим 3:
+Режим установки годин ;
+//колір діода зелений.
+
+
+Особливості программи:
+
+
+При завершенні установки часу секунди обнуляються.
+
+Кожен режим легко ідентифікувати за допомогою кольорового сигналу 
+діода та мануалу до пристрою.
+
+Враховано ефект  залипання кнопки : 
+в деяких строках коду використовується оператор “>=”замість “==”.
+
+*/
+
+
+#include <avr/io.h>
+#include <avr/interrupt.h>
+
+unsigned char micro_s=0;
+unsigned int mili_s=0, s=0, min=0,HR=0;
+unsigned int bttcount=0;
+char i;
+char data[4];
+//char dataHR[4];
+
+ISR(TIMER0_COMP_vect){
+	if((bttcount==0)||(bttcount==1)){
+	micro_s++;
+		if(micro_s==4)
+		{
+			mili_s++;
+			micro_s=0;
+		}
+		if(mili_s==1000)
+		{
+			s++;
+			mili_s=0;
+		}
+		if(s==60)
+		{
+			min++;
+			s=0;
+		}
+		if(min>=60)
+		{	
+			HR++;
+			min=0;	
+		}
+		if(HR>=24){	
+		HR=0;
+		}
+	}	
+}
+
+void convert(char *data, int FIRST_12,int SECOND_34)
+{
+	data[0] = SECOND_34%10;
+	SECOND_34=SECOND_34/10;
+	data[1] = SECOND_34%10;
+	SECOND_34=SECOND_34/10;
+	data[2] = FIRST_12%10;
+	FIRST_12=FIRST_12/10;
+	data[3] =FIRST_12%10;
+	
+}
+  
+char dig2segcode(char d)
+{
+	switch (d) { 
+	
+		case 0: 
+			return 0x5F; 
+		case 1: 
+			return 0x06; 
+		case 2: 
+			return 0x3B; 
+		case 3: 
+			return 0x2F; 
+		case 4: 
+			return 0x66;
+		case 5: 
+			return 0x6D; 
+		case 6: 
+			return 0x7D;  
+		case 7: 
+			return 0x07; 
+		case 8: 
+			return 0x7F; 
+		case 9: 
+			return 0x6F;  
+	}	
+return 0;
+}
+
+  ISR(TIMER2_COMP_vect)
+{
+
+	if(bttcount==0||bttcount==2||bttcount==3){
+		PORTC|=0x00;
+		PORTA|=0x00;
+		static char i;//!!!!
+			
+		convert(data,HR,min);	
+			
+		PORTA = 0;
+		PORTC = dig2segcode(data[i]);
+		PORTA = (1<<(7-i));
+		i=(i+1)&0x03;
+		
+			if(i==3){
+			PORTC|=0x80;
+			}	
+			
+	}	else if (bttcount==1){
+		
+	 	  PORTC|=0x00;
+			PORTA|=0x00;
+			static char i;//!!!!
+			
+			convert(data,min,s);
+			
+			PORTA = 0;
+			PORTC = dig2segcode(data[i]);
+			PORTA = (1<<(7-i));
+			i=(i+1)&0x03;
+			
+		  	if(i==3){
+		  	PORTC|=0x80;
+		  	}	
+		 }
+	
+}	
+
+	void init_interupt()   //buttons 2.0
+{
+	DDRD = 0xff;	
+	DDRC = 0xFF;
+	GICR |= 0xC0;
+	MCUCR |= 0x0F;
+	DDRD |= (0<<2)|(0<<3);
+}
+
+ISR(INT0_vect)
+{
+	
+	bttcount++;
+	
+	if(bttcount==0){
+		PORTD&=0x00;
+		PORTD|=0x80;
+	}
+	
+	if(bttcount==1){
+    PORTD&=0x00;
+		PORTD|=0x80;
+	}
+	
+	if(bttcount==2){
+	   PORTD&=0x00;	
+     PORTD|=0x10;
+	}
+	
+	if(bttcount==3){
+		PORTD&=0x00;
+		PORTD|=0x20;
+	}
+	
+	if(bttcount>=4){
+		bttcount=0;
+		PORTD&=0x00;
+    PORTD|=0x80;
+	}
+}
+
+ISR(INT1_vect)
+{
+	if(bttcount==2){
+		HR++;	
+		s=0;
+		
+		if(HR>=25){
+		HR=0;
+		}
+	}
+	if(bttcount==3){
+		min++;
+		s=0;
+		
+		if(min>=60){
+		min=0;
+		}
+	}
+		
+}
+int main(void)
+{
+	DDRA = 0xF0; 
+	DDRC = 0xFF; 
+	DDRD = 0xB0; 
+//Ініциализація преривания по таймеру 0:
+	TCNT0=0x00;
+	OCR0=0xFA;
+	TIMSK|=0x02;
+	TCCR0=0x09;
+//Ініциализація преривания по таймеру 2:
+	TCCR2=0x0F;
+	OCR2=5;
+	TIMSK|=0x80;
+
+	MCUCR|=0x0F;
+	GICR|=0xC0;
+	asm("sei");//дозволити глобальні преривання
+	while(1){
+	}  
+}
+
