@@ -117,7 +117,7 @@ return 0;
 	if(bttcount==0||bttcount==2||bttcount==3){
 		PORTC|=0x00;
 		PORTA|=0x00;
-		static char i;//!!!!
+		static char i;
 			
 		convert(data,HR,min);	
 			
@@ -134,7 +134,7 @@ return 0;
 		
 	 	        PORTC|=0x00;
 			PORTA|=0x00;
-			static char i;//!!!!
+			static char i;
 			
 			convert(data,min,s);
 			
@@ -197,7 +197,7 @@ ISR(INT1_vect)
 		HR++;	
 		s=0;
 		
-		if(HR>=25){
+		if(HR>=24){
 		HR=0;
 		}
 	}
